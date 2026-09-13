@@ -6,6 +6,7 @@ for leads, decisions, property matches, and dashboard analytics.
 """
 
 import os
+import re
 import csv
 import json
 import sqlite3
@@ -216,6 +217,92 @@ def row_to_dict(row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:
     if row is None:
         return None
     return dict(row)
+
+
+def get_dataset_seeded_ids(csv_path: Optional[str] = None) -> set:
+    """Returns the set of lead_ids present in the baseline dataset (leads.csv)."""
+    target_csv = csv_path if csv_path else DEFAULT_LEADS_CSV_PATH
+    ids = set()
+    if os.path.exists(target_csv):
+        try:
+            with open(target_csv, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    lid = r.get("lead_id")
+                    if lid and str(lid).strip():
+                        ids.add(str(lid).strip())
+        except Exception:
+            pass
+    # Fallback to default range if CSV could not be read
+    if not ids:
+        ids = {f"L{i}" for i in range(101, 121)}
+    return ids
+
+
+def generate_new_lead_id(db_path: Optional[str] = None, csv_path: Optional[str] = None) -> str:
+    """
+    Generates a guaranteed unique lead_id that is next in position to the last lead in the dataset.
+    Scans all lead_ids across both the baseline leads.csv dataset and the SQLite leads table,
+    extracts the highest lead number, and returns the next sequential ID (e.g. L121, L122, L123...).
+    """
+    existing_ids = get_dataset_seeded_ids(csv_path)
+
+    initialize_database(db_path)
+    try:
+        with get_db_connection(db_path) as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT lead_id FROM leads;")
+            for r in cursor.fetchall():
+                if r["lead_id"]:
+                    existing_ids.add(str(r["lead_id"]).strip())
+    except Exception:
+        pass
+
+    max_num = 120  # Baseline: Seeded leads span L101 to L120
+    for lid in existing_ids:
+        digits = re.findall(r"\d+", lid)
+        for d in digits:
+            try:
+                num = int(d)
+                if num > max_num:
+                    max_num = num
+            except ValueError:
+                pass
+
+    candidate_num = max_num + 1
+    candidate_id = f"L{candidate_num}"
+    while candidate_id in existing_ids:
+        candidate_num += 1
+        candidate_id = f"L{candidate_num}"
+
+    return candidate_id
+
+
+def create_new_lead(
+    lead_id: Optional[str] = None,
+    initial_data: Optional[Dict[str, Any]] = None,
+    db_path: Optional[str] = None
+) -> str:
+    """
+    Explicitly creates and persists a brand-new lead record into SQLite.
+    Guarantees that existing leads are never overwritten or modified.
+    Returns the newly created lead_id.
+    """
+    initialize_database(db_path)
+    if not lead_id or not str(lead_id).strip():
+        lead_id = generate_new_lead_id(db_path)
+    else:
+        lead_id = str(lead_id).strip()
+
+    data = dict(initial_data) if initial_data else {}
+    data["lead_id"] = lead_id
+    data.setdefault("status", "NEW")
+    data.setdefault("profile_completeness", 0.0)
+    data.setdefault("lead_quality", "UNASSIGNED")
+    data.setdefault("next_action", "CONTINUE_QUALIFICATION")
+
+    save_lead(data, db_path=db_path)
+    return lead_id
 
 
 def save_lead(lead_data: Dict[str, Any], db_path: Optional[str] = None) -> bool:

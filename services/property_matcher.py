@@ -342,6 +342,17 @@ def find_matches(
 
     req_beds = _parse_int(req.get("bedrooms") or req.get("bhk"))
 
+    # If no search criteria were specified, return empty list
+    has_any_criteria = (
+        b_min is not None
+        or b_max is not None
+        or len(req_locs) > 0
+        or req_type is not None
+        or req_beds is not None
+    )
+    if not has_any_criteria:
+        return []
+
     # 3. Score and Rank Properties
     matched_results: List[Dict[str, Any]] = []
 

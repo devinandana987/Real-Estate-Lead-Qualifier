@@ -24,15 +24,15 @@ def render_action_badge(action: Optional[str]):
     """Renders visual callout according to recommended next action."""
     action_str = str(action or "PENDING").upper()
     if "ESCALATE" in action_str:
-        st.success(f"🚀 **RECOMMENDED ACTION:**\n\n### {action_str} 🔥")
+        st.success(f"**RECOMMENDED ACTION:**\n\n### {action_str}")
     elif "SHORTLIST" in action_str:
-        st.info(f"📄 **RECOMMENDED ACTION:**\n\n### {action_str} 📋")
+        st.info(f"**RECOMMENDED ACTION:**\n\n### {action_str}")
     elif "REQUEST" in action_str or "CONTINUE" in action_str:
-        st.warning(f"💬 **RECOMMENDED ACTION:**\n\n### {action_str} ⏳")
+        st.warning(f"**RECOMMENDED ACTION:**\n\n### {action_str}")
     elif "LOW" in action_str or "DISCARD" in action_str:
-        st.error(f"🧊 **RECOMMENDED ACTION:**\n\n### {action_str} ❌")
+        st.error(f"**RECOMMENDED ACTION:**\n\n### {action_str}")
     else:
-        st.info(f"📌 **RECOMMENDED ACTION:**\n\n### {action_str}")
+        st.info(f"**RECOMMENDED ACTION:**\n\n### {action_str}")
 
 
 def render_dashboard(db_path: Optional[str] = None):
@@ -40,7 +40,7 @@ def render_dashboard(db_path: Optional[str] = None):
     Main entry point for rendering the Broker Dashboard.
     Can be imported by app.py or tested independently.
     """
-    st.markdown("## 🏢 Broker Lead Management Dashboard")
+    st.markdown("## Broker Lead Management Dashboard")
     st.caption("Review incoming leads, AI qualification scores, property matches, and broker recommendations.")
 
     # Safe database initialization
@@ -48,7 +48,7 @@ def render_dashboard(db_path: Optional[str] = None):
         initialize_database(db_path)
         stats = get_dashboard_statistics(db_path)
     except Exception as e:
-        st.error(f"⚠️ Unable to connect to the database: {str(e)}")
+        st.error(f"Unable to connect to the database: {str(e)}")
         return
 
     # -------------------------------------------------------------
@@ -58,15 +58,15 @@ def render_dashboard(db_path: Optional[str] = None):
     with m_col1:
         st.metric("Total Leads", stats.get("total_leads", 0))
     with m_col2:
-        st.metric("🔥 Hot Leads", stats.get("hot_leads", 0))
+        st.metric("Hot Leads", stats.get("hot_leads", 0))
     with m_col3:
-        st.metric("⚡ Warm Leads", stats.get("warm_leads", 0))
+        st.metric("Warm Leads", stats.get("warm_leads", 0))
     with m_col4:
-        st.metric("🧊 Cold / Low", stats.get("cold_leads", 0))
+        st.metric("Cold / Low", stats.get("cold_leads", 0))
     with m_col5:
-        st.metric("🚀 Escalated", stats.get("escalated_leads", 0))
+        st.metric("Escalated", stats.get("escalated_leads", 0))
     with m_col6:
-        st.metric("⏳ Pending Follow-up", stats.get("pending_followups", 0))
+        st.metric("Pending Follow-up", stats.get("pending_followups", 0))
 
     st.markdown("---")
 
@@ -76,7 +76,7 @@ def render_dashboard(db_path: Optional[str] = None):
     f_col1, f_col2, f_col3, f_col4 = st.columns([2, 1, 1, 1])
 
     with f_col1:
-        search_query = st.text_input("🔍 Search Leads", placeholder="Search by Lead ID, Name, City, or Contact...")
+        search_query = st.text_input("Search Leads", placeholder="Search by Lead ID, Name, City, or Contact...")
     with f_col2:
         quality_filter = st.selectbox(
             "Quality Tier",
@@ -119,9 +119,9 @@ def render_dashboard(db_path: Optional[str] = None):
 
     if not leads:
         if stats.get("total_leads", 0) == 0:
-            st.info("ℹ️ No leads found in the database yet. Processed leads will automatically appear here.")
+            st.info("No leads found in the database yet. Processed leads will automatically appear here.")
         else:
-            st.warning("⚠️ No leads match the selected filter criteria. Try clearing the filters.")
+            st.warning("No leads match the selected filter criteria. Try clearing the filters.")
         return
 
     # Prepare tabular representation for quick scanning
@@ -130,7 +130,7 @@ def render_dashboard(db_path: Optional[str] = None):
         min_b = l.get("min_budget")
         max_b = l.get("max_budget")
         if min_b and max_b:
-            budget_display = f"{format_currency_inr(min_b)} – {format_currency_inr(max_b)}"
+            budget_display = f"{format_currency_inr(min_b)} - {format_currency_inr(max_b)}"
         elif max_b:
             budget_display = f"Up to {format_currency_inr(max_b)}"
         elif min_b:
@@ -145,7 +145,7 @@ def render_dashboard(db_path: Optional[str] = None):
             "Lead ID": l.get("lead_id"),
             "Name": l.get("name") or "Anonymous",
             "Intent": l.get("intent") or "Buy",
-            "Score": f"{int(l.get('lead_score'))}/100" if l.get("lead_score") is not None else "—",
+            "Score": f"{int(l.get('lead_score'))}/100" if l.get("lead_score") is not None else "-",
             "Quality": l.get("lead_quality") or "UNASSIGNED",
             "Location": loc_display,
             "Budget": budget_display,
@@ -156,7 +156,7 @@ def render_dashboard(db_path: Optional[str] = None):
         })
 
     df_leads = pd.DataFrame(table_rows)
-    st.subheader(f"📋 Leads List ({len(df_leads)})")
+    st.subheader(f"Leads Registry ({len(df_leads)})")
     st.dataframe(df_leads, use_container_width=True, hide_index=True)
 
     st.markdown("---")
@@ -164,17 +164,17 @@ def render_dashboard(db_path: Optional[str] = None):
     # -------------------------------------------------------------
     # 4. LEAD DETAIL VIEW
     # -------------------------------------------------------------
-    st.subheader("🔍 Lead Deep Dive & Actions")
+    st.subheader("Lead Specification & Actions")
 
     # Selectbox to pick a lead
     lead_options = [
-        f"{l['lead_id']} — {l.get('name') or 'Anonymous'} ({l.get('lead_quality') or 'UNASSIGNED'}, Score: {l.get('lead_score') or 0})"
+        f"{l['lead_id']} - {l.get('name') or 'Anonymous'} ({l.get('lead_quality') or 'UNASSIGNED'}, Score: {l.get('lead_score') or 0})"
         for l in leads
     ]
     selected_option = st.selectbox("Select Lead to Inspect:", options=lead_options, index=0)
 
     # Extract selected lead_id
-    selected_lead_id = selected_option.split(" — ")[0].strip()
+    selected_lead_id = selected_option.split(" - ")[0].strip()
     lead_detail = get_lead(selected_lead_id, db_path=db_path)
 
     if not lead_detail:
@@ -182,7 +182,7 @@ def render_dashboard(db_path: Optional[str] = None):
         return
 
     # ----------------- PROMINENT BROKER SUMMARY -----------------
-    st.markdown("### 📝 Broker Executive Summary")
+    st.markdown("### Executive Briefing Summary")
     summary_text = lead_detail.get("broker_summary")
     if summary_text:
         st.info(summary_text)
@@ -193,7 +193,7 @@ def render_dashboard(db_path: Optional[str] = None):
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
-        st.markdown("#### 📋 Lead Profile & Requirements")
+        st.markdown("#### Lead Profile & Parameters")
         b_name = lead_detail.get("name") or "Not specified"
         b_contact = lead_detail.get("contact") or "Not specified"
         b_intent = f"{lead_detail.get('intent', 'Buy')} ({lead_detail.get('intent_level', 'Standard')})"
@@ -223,7 +223,7 @@ def render_dashboard(db_path: Optional[str] = None):
         st.progress(min(1.0, completeness / 100.0))
 
     with col_right:
-        st.markdown("#### 🎯 Qualification & Decision Trace")
+        st.markdown("#### Qualification & Decision Trace")
 
         q_col1, q_col2 = st.columns(2)
         with q_col1:
@@ -237,7 +237,7 @@ def render_dashboard(db_path: Optional[str] = None):
         render_action_badge(lead_detail.get("next_action"))
 
         # AI Reasoning
-        st.markdown("**🧠 Decision Reasoning:**")
+        st.markdown("**Decision Reasoning:**")
         reasoning = lead_detail.get("decision_reason")
         if reasoning:
             st.markdown(reasoning)
@@ -249,7 +249,7 @@ def render_dashboard(db_path: Optional[str] = None):
     # -------------------------------------------------------------
     # 5. MATCHED PROPERTIES SECTION
     # -------------------------------------------------------------
-    st.markdown("### 🏠 Matched Property Inventory")
+    st.markdown("### Matched Property Inventory")
     matches = get_lead_matches(selected_lead_id, db_path=db_path)
 
     if matches:
@@ -258,20 +258,20 @@ def render_dashboard(db_path: Optional[str] = None):
             match_table_data.append({
                 "Property ID": m.get("property_id"),
                 "Title": m.get("title") or "Unnamed Property",
-                "Match Score": f"{m.get('match_percentage')}%" if m.get("match_percentage") is not None else "—",
+                "Match Score": f"{m.get('match_percentage')}%" if m.get("match_percentage") is not None else "-",
                 "Price": format_currency_inr(m.get("price")),
-                "Location": m.get("location") or "—",
+                "Location": m.get("location") or "-",
                 "Match Reason": m.get("match_reason") or "Criteria matched"
             })
         st.dataframe(pd.DataFrame(match_table_data), use_container_width=True, hide_index=True)
     else:
-        st.info("ℹ️ No property matches currently linked to this lead.")
+        st.info("No property matches currently linked to this lead.")
 
     # -------------------------------------------------------------
     # 6. BROKER STATUS WORKFLOW
     # -------------------------------------------------------------
     st.markdown("---")
-    st.markdown("### ⚡ Broker Action & Status Workflow")
+    st.markdown("### Pipeline Status Workflow")
     current_status = lead_detail.get("status") or "NEW"
     status_options = ["NEW", "IN_REVIEW", "CONTACTED", "MEETING_SCHEDULED", "CLOSED", "ARCHIVED"]
 
@@ -283,11 +283,11 @@ def render_dashboard(db_path: Optional[str] = None):
     with s_col2:
         st.write("")  # alignment spacer
         st.write("")
-        if st.button("💾 Save Status Update", key=f"btn_update_{selected_lead_id}"):
+        if st.button("Update Status", key=f"btn_update_{selected_lead_id}"):
             if new_status != current_status:
                 success = update_lead(selected_lead_id, {"status": new_status}, db_path=db_path)
                 if success:
-                    st.success(f"Lead `{selected_lead_id}` status updated to **{new_status}**!")
+                    st.success(f"Lead `{selected_lead_id}` status updated to **{new_status}**.")
                     st.rerun()
                 else:
                     st.error("Failed to update status.")

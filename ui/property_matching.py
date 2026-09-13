@@ -62,7 +62,7 @@ def render_property_matches(
     Args:
         matches: List of property dictionaries returned by services.property_matcher.find_matches.
     """
-    st.subheader("🏠 Matching Properties")
+    st.subheader("Matching Property Recommendations")
 
     if not matches:
         st.info("No suitable properties found.")
@@ -95,7 +95,7 @@ def render_property_matches(
             col_info, col_metric = st.columns([3, 1])
             with col_info:
                 st.markdown(f"### {title} ({prop_id})")
-                st.write(f"📍 **Location:** {location} | 🏢 **Type:** {prop_type}")
+                st.write(f"**Location:** {location} | **Type:** {prop_type}")
             with col_metric:
                 st.metric("Match", match_pct)
 
@@ -103,26 +103,26 @@ def render_property_matches(
             col1, col2, col3, col4 = st.columns(4)
             with col1:
                 st.markdown("**Bedrooms**")
-                st.write(f"🛏️ {bedrooms} BHK" if bedrooms else "🛏️ Not specified")
+                st.write(f"{bedrooms} BHK" if bedrooms else "Not specified")
             with col2:
                 st.markdown("**Bathrooms**")
-                st.write(f"🚿 {bathrooms} Bathrooms" if bathrooms else "🚿 Not specified")
+                st.write(f"{bathrooms} Bathrooms" if bathrooms else "Not specified")
             with col3:
                 st.markdown("**Price**")
-                st.write(f"🏷️ {format_inr(price)}")
+                st.write(f"{format_inr(price)}")
             with col4:
                 st.markdown("**Possession**")
-                st.write(f"📅 {possession}")
+                st.write(f"{possession}")
 
             # Amenities
             st.write(f"**Amenities:** {amenities}")
 
             # Match explanation if available
             if explanation:
-                st.write(f"💡 **Match Reasoning:** {explanation}")
+                st.write(f"**Match Evaluation:** {explanation}")
 
     # Expandable section for table view
-    with st.expander("📋 View All Matching Properties as Table"):
+    with st.expander("Tabular View of Matches"):
         table_rows = []
         for p in matches:
             pct = p.get("match_percentage")

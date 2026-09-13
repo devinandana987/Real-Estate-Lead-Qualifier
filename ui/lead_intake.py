@@ -11,22 +11,42 @@ import streamlit as st
 import pandas as pd
 from agent.schemas import LeadProfile
 from agent.prompts import extract_lead_requirements
+from database.db import create_new_lead, get_dataset_seeded_ids
 
 
 def init_intake_state():
     """Initializes session state variables required for Lead Intake."""
-    if "lead_id_counter" not in st.session_state:
-        st.session_state["lead_id_counter"] = 101
+    # Seeded demo leads in leads.csv (L101 - L120). Ensure user sessions never touch them.
+    seeded_ids = get_dataset_seeded_ids()
 
-    if "lead_profile" not in st.session_state:
-        lead_id = f"L{st.session_state['lead_id_counter']:03d}"
-        st.session_state["lead_profile"] = LeadProfile(lead_id=lead_id)
+    # Clear old legacy counter if present from previous browser sessions
+    if "lead_id_counter" in st.session_state:
+        del st.session_state["lead_id_counter"]
 
-    if "messages" not in st.session_state:
+    if (
+        "lead_profile" not in st.session_state
+        or st.session_state.get("lead_profile") is None
+        or st.session_state["lead_profile"].lead_id in seeded_ids
+    ):
+        new_id = create_new_lead()
+        st.session_state["lead_profile"] = LeadProfile(lead_id=new_id)
         st.session_state["messages"] = [
             {
                 "role": "assistant",
-                "content": "👋 **Hello! I'm your AI Real Estate Advisor.** Tell me what kind of home you are looking for—such as your preferred area, budget, BHK, and timeline—and I will extract your requirements and find matching properties!"
+                "content": f"Welcome to the Property Advisory Service. Please describe your property requirements for **Lead {new_id}**—such as preferred location, budget, bedroom count (BHK), and purchase timeline—and I will record your requirements and identify matching properties."
+            }
+        ]
+        st.session_state["missing_fields"] = st.session_state["lead_profile"].get_missing_fields()
+        st.session_state["show_matches"] = False
+        st.session_state["user_matches"] = []
+        st.session_state["matching_warning"] = None
+
+    if "messages" not in st.session_state:
+        current_id = st.session_state["lead_profile"].lead_id
+        st.session_state["messages"] = [
+            {
+                "role": "assistant",
+                "content": f"Welcome to the Property Advisory Service. Please describe your property requirements for **Lead {current_id}**—such as preferred location, budget, bedroom count (BHK), and purchase timeline—and I will record your requirements and identify matching properties."
             }
         ]
 
@@ -35,9 +55,11 @@ def init_intake_state():
 
 
 def reset_lead_intake():
-    """Resets the intake session for a new lead."""
-    st.session_state["lead_id_counter"] += 1
-    new_id = f"L{st.session_state['lead_id_counter']:03d}"
+    """Resets the intake session for a brand new lead and registers it in the database."""
+    if "lead_id_counter" in st.session_state:
+        del st.session_state["lead_id_counter"]
+
+    new_id = create_new_lead()
     st.session_state["lead_profile"] = LeadProfile(lead_id=new_id)
     st.session_state["missing_fields"] = st.session_state["lead_profile"].get_missing_fields()
     st.session_state["messages"] = [
@@ -46,10 +68,13 @@ def reset_lead_intake():
             "content": f"New consultation started for **Lead {new_id}**. What property requirements can I note down for you today?"
         }
     ]
+    st.session_state["show_matches"] = False
+    st.session_state["user_matches"] = []
+    st.session_state["matching_warning"] = None
 
 
 def process_user_input(user_text: str):
-    """Processes incoming user message through the intake extractor."""
+    """Processes incoming user message through the intake extractor and syncs to database."""
     if not user_text or not user_text.strip():
         return
 
@@ -72,6 +97,18 @@ def process_user_input(user_text: str):
         "content": result.assistant_reply
     })
 
+    # Persist live updates to the database for this specific lead
+    try:
+        from services.qualification import process_and_store_lead
+        p_dict = result.updated_profile.model_dump()
+        process_and_store_lead(
+            lead_profile=p_dict,
+            property_matches=st.session_state.get("user_matches"),
+            decision=None
+        )
+    except Exception:
+        pass
+
 
 def render_lead_intake():
     """Main rendering function for Member 1: Lead Intake & Understanding.
@@ -83,28 +120,28 @@ def render_lead_intake():
     # Header section
     top_col1, top_col2 = st.columns([4, 1])
     with top_col1:
-        st.subheader("🏡 AI Lead Intake & Requirement Understanding")
-        st.caption("Converse naturally in chat. The AI agent extracts structured criteria and flags missing details in real-time.")
+        st.subheader("Client Intake & Requirement Analysis")
+        st.caption("Enter requirements via natural language conversation. The system extracts structured criteria in real-time.")
     with top_col2:
-        if st.button("🔄 New Lead", use_container_width=True, help="Reset and start intake for a new buyer"):
+        if st.button("New Session", use_container_width=True, help="Reset and start intake for a new buyer"):
             reset_lead_intake()
             st.rerun()
 
     st.markdown("---")
 
-    # Quick prompt scenario buttons for rapid judge testing
-    st.markdown("**⚡ Quick Test Scenarios:**")
+    # Quick prompt scenario buttons for rapid testing
+    st.markdown("**Sample Inquiries:**")
     q_col1, q_col2, q_col3 = st.columns(3)
     quick_prompt = None
 
     with q_col1:
-        if st.button("🏢 3 BHK in Kakkanad under 80L", use_container_width=True):
+        if st.button("3 BHK in Kakkanad (Under 80L)", use_container_width=True):
             quick_prompt = "Hi, I am Rahul. Looking for a 3 BHK apartment in Kakkanad under 80 lakhs for family self-use within 3 months."
     with q_col2:
-        if st.button("🏡 Luxury Villa in Edappally", use_container_width=True):
+        if st.button("Luxury Villa in Edappally (2.5 Cr)", use_container_width=True):
             quick_prompt = "Looking for a luxury 4 BHK Villa in Edappally or Palarivattom. Budget is 2.5 Crores for investment."
     with q_col3:
-        if st.button("🌊 2 BHK Marine Drive", use_container_width=True):
+        if st.button("2 BHK Marine Drive (60-75L)", use_container_width=True):
             quick_prompt = "Need a 2 BHK apartment in Marine Drive, budget around 60 to 75 lakhs, ready to move immediately."
 
     if quick_prompt:
@@ -116,7 +153,7 @@ def render_lead_intake():
 
     # ==================== LEFT COLUMN: CHAT INTERFACE ====================
     with chat_col:
-        st.markdown(f"#### 💬 Conversation History `[{profile.lead_id}]`")
+        st.markdown(f"#### Consultation Transcript `[{profile.lead_id}]`")
         
         # Chat messages scrollable container
         chat_container = st.container(height=420)
@@ -133,7 +170,7 @@ def render_lead_intake():
 
     # ==================== RIGHT COLUMN: EXTRACTED REQUIREMENTS ====================
     with profile_col:
-        st.markdown("#### 📋 Extracted Requirements")
+        st.markdown("#### Structured Requirements Profile")
 
         # Completeness Progress
         pct = profile.completeness_percentage()
@@ -143,10 +180,10 @@ def render_lead_intake():
         # Missing Fields Notice or Ready Confirmation
         missing = profile.get_missing_fields()
         if not missing:
-            st.success("✅ **All Core Requirements Captured!** Ready for property matching.")
+            st.success("All Core Requirements Captured. Qualified for property matching.")
         else:
             missing_badges = " ".join([f"`{field}`" for field in missing])
-            st.warning(f"⚠️ **Pending Info:** {missing_badges}")
+            st.warning(f"Pending Parameters: {missing_badges}")
 
         # Metrics cards
         m_col1, m_col2 = st.columns(2)
@@ -162,23 +199,19 @@ def render_lead_intake():
             st.metric(label="Purpose", value=(profile.purpose or "Not Specified").replace("_", " ").title())
 
         # Structured Requirements Table (as required by Feature 1)
-        st.markdown("##### 📊 Requirements Summary Table")
+        st.markdown("##### Requirements Summary")
         table_data = [
-            {"Requirement Field": "Lead ID", "Extracted Value": profile.lead_id, "Status": "✅ Confirmed"},
-            {"Requirement Field": "Buyer Name", "Extracted Value": profile.name or "Anonymous", "Status": "✅ Set" if profile.name else "⚪ Optional"},
-            {"Requirement Field": "Budget Range", "Extracted Value": profile.budget_display(), "Status": "✅ Captured" if (profile.budget_min or profile.budget_max) else "❌ Missing"},
-            {"Requirement Field": "Locations", "Extracted Value": ", ".join(profile.preferred_locations) if profile.preferred_locations else "None", "Status": "✅ Captured" if profile.preferred_locations else "❌ Missing"},
-            {"Requirement Field": "Property Type", "Extracted Value": profile.property_type or "None", "Status": "✅ Captured" if profile.property_type else "❌ Missing"},
-            {"Requirement Field": "Bedrooms (BHK)", "Extracted Value": str(profile.bedrooms) if profile.bedrooms else "None", "Status": "✅ Captured" if profile.bedrooms else "❌ Missing"},
-            {"Requirement Field": "Timeline", "Extracted Value": profile.timeline or "None", "Status": "✅ Captured" if profile.timeline else "❌ Missing"},
-            {"Requirement Field": "Purpose", "Extracted Value": profile.purpose or "None", "Status": "✅ Captured" if profile.purpose else "❌ Missing"},
+            {"Requirement Field": "Lead ID", "Extracted Value": profile.lead_id, "Status": "Confirmed"},
+            {"Requirement Field": "Buyer Name", "Extracted Value": profile.name or "Anonymous", "Status": "Set" if profile.name else "Optional"},
+            {"Requirement Field": "Budget Range", "Extracted Value": profile.budget_display(), "Status": "Captured" if (profile.budget_min or profile.budget_max) else "Missing"},
+            {"Requirement Field": "Locations", "Extracted Value": ", ".join(profile.preferred_locations) if profile.preferred_locations else "None", "Status": "Captured" if profile.preferred_locations else "Missing"},
+            {"Requirement Field": "Property Type", "Extracted Value": profile.property_type or "None", "Status": "Captured" if profile.property_type else "Missing"},
+            {"Requirement Field": "Bedrooms (BHK)", "Extracted Value": str(profile.bedrooms) if profile.bedrooms else "None", "Status": "Captured" if profile.bedrooms else "Missing"},
+            {"Requirement Field": "Timeline", "Extracted Value": profile.timeline or "None", "Status": "Captured" if profile.timeline else "Missing"},
+            {"Requirement Field": "Purpose", "Extracted Value": profile.purpose or "None", "Status": "Captured" if profile.purpose else "Missing"},
         ]
         df = pd.DataFrame(table_data)
         st.dataframe(df, use_container_width=True, hide_index=True)
-
-        # Developer / Agent JSON trace inspection
-        with st.expander("🔍 View Raw Structured JSON (Pydantic Model)"):
-            st.json(profile.model_dump())
 
 
 # Standalone runner for Member 1 testing

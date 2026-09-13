@@ -9,7 +9,18 @@ from agent.schemas import LeadProfile, ExtractedLeadInfo, ExtractionResult
 load_dotenv(override=True)
 
 SYSTEM_INTAKE_PROMPT = """You are a smart, friendly, and professional Real Estate Lead Intake Assistant.
-Your goal is to converse with prospective property buyers, understand their housing requirements, and extract structured criteria.
+Your goal is strictly to converse with prospective property buyers, understand their housing requirements, and extract structured criteria.
+
+CRITICAL DOMAIN RESTRICTION & OFF-TOPIC POLICY:
+- You are exclusively a Real Estate Property Advisory Assistant for property search, home buying, and real estate criteria collection.
+- You must strictly REFUSE to answer or entertain any questions, trivia, or requests that are out of context or unrelated to real estate or property buying (such as general knowledge, trivia, sports, celebrities like Messi, entertainment, coding, weather, politics, jokes, personal advice, etc.).
+- If the user's message is off-topic or out of context:
+  1. DO NOT answer the question.
+  2. DO NOT provide information about the off-topic subject.
+  3. Your `assistant_reply` MUST politely decline and firmly redirect them back to property requirements. Example: "I am dedicated exclusively to real estate and property consultation. Please share your property requirements such as preferred location, budget, bedroom count (BHK), or property type."
+  4. Set `is_off_topic` to true.
+  5. Set all values in `extracted_info` to null (or leave prior verified real estate info intact). Do not extract anything from off-topic queries.
+  6. Include unknown core criteria in `missing_fields`.
 
 The essential criteria you need to capture are:
 1. name: Buyer's name (if mentioned)
@@ -31,6 +42,7 @@ Instructions:
 
 You MUST respond strictly with a valid JSON object in this exact schema:
 {
+  "is_off_topic": boolean,
   "extracted_info": {
     "name": string or null,
     "budget_min": number or null,
@@ -42,7 +54,7 @@ You MUST respond strictly with a valid JSON object in this exact schema:
     "purpose": string or null
   },
   "missing_fields": [string],
-  "assistant_reply": "Friendly conversational response asking for missing details or confirming complete info"
+  "assistant_reply": "Friendly conversational response asking for missing details, or polite redirect if off-topic"
 }
 """
 
@@ -141,6 +153,27 @@ def _heuristic_fallback_extraction(user_message: str, current_profile: LeadProfi
         extracted.purpose = "investment"
     elif "self" in text or "family" in text or "live" in text or "stay" in text:
         extracted.purpose = "self_use"
+
+    # Domain guardrail for off-topic queries in heuristic fallback
+    real_estate_terms = [
+        "bhk", "bedroom", "bed", "apartment", "flat", "villa", "house", "penthouse",
+        "plot", "land", "budget", "lakh", "crore", "cr", "lakhs", "buy", "purchase",
+        "rent", "invest", "self", "family", "ready to move", "immediate", "month",
+        "property", "home", "sqft", "square feet", "builder", "price"
+    ]
+    is_re_related = any(term in text for term in real_estate_terms) or bool(matched_locs)
+    greetings = ["hi", "hello", "hey", "good morning", "good evening", "namaste"]
+    is_greeting = any(text.strip() == g or text.startswith(g + " ") for g in greetings)
+
+    if not is_re_related and not is_greeting and len(text.strip()) > 0:
+        reply = "I am dedicated exclusively to real estate and property consultation. Please share your property requirements such as preferred location, budget, bedroom count (BHK), or property type."
+        return ExtractionResult(
+            extracted_info=ExtractedLeadInfo(),
+            updated_profile=current_profile,
+            missing_fields=current_profile.get_missing_fields(),
+            assistant_reply=reply,
+            is_complete=len(current_profile.get_missing_fields()) == 0
+        )
 
     # Merge with current profile
     updated_profile = merge_extracted_into_profile(current_profile, extracted)
@@ -244,6 +277,17 @@ def extract_lead_requirements(
 
         raw_content = response.choices[0].message.content
         data = json.loads(raw_content)
+
+        is_off_topic = data.get("is_off_topic", False)
+        if is_off_topic:
+            assistant_reply = data.get("assistant_reply") or "I am dedicated exclusively to real estate and property consultation. Please share your property requirements such as preferred location, budget, bedroom count (BHK), or property type."
+            return ExtractionResult(
+                extracted_info=ExtractedLeadInfo(),
+                updated_profile=current_profile,
+                missing_fields=current_profile.get_missing_fields(),
+                assistant_reply=assistant_reply,
+                is_complete=len(current_profile.get_missing_fields()) == 0
+            )
 
         extracted_dict = data.get("extracted_info", {})
         extracted_info = ExtractedLeadInfo(**extracted_dict)
