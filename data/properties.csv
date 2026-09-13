@@ -1,0 +1,27 @@
+property_id,title,location,property_type,bedrooms,bathrooms,price,possession_date,status,amenities,investment_score,family_score
+P101,Prestige Garden Residences,Kakkanad,Apartment,3,3,7500000.0,Ready to Move,Available,"Gym, Pool, Security, Clubhouse, Power Backup",8.8,9.2
+P102,Asset Summit Suites,Kakkanad,Apartment,2,2,5200000.0,Ready to Move,Available,"Gym, Security, Intercom, Covered Parking",8.5,7.8
+P103,Skyline Imperial Heights,Edappally,Apartment,3,3,8800000.0,2025-03-31,Available,"Pool, Gym, Children Play Area, 24/7 Security",8.2,8.9
+P104,Confident Lotus Luxury,Edappally,Apartment,2,2,4800000.0,Ready to Move,Available,"Security, Power Backup, Lift, Rainwater Harvesting",7.9,7.5
+P105,Sobha Silver Spring,Vyttila,Apartment,4,4,16000000.0,Ready to Move,Available,"Clubhouse, Infinity Pool, Gym, Tennis Court, Security",7.8,9.5
+P106,Varma Regent,Vyttila,Apartment,2,2,6200000.0,Ready to Move,Sold,"Gym, Security, Lift, Covered Parking",7.5,7.0
+P107,Kent Palm Villas,Kakkanad,Villa,4,4,18500000.0,Ready to Move,Available,"Private Garden, 24/7 Security, Clubhouse, Swimming Pool",8.0,9.4
+P108,Olive Kalista,Kakkanad,Apartment,3,2,6800000.0,Ready to Move,Available,"Gym, Swimming Pool, Party Hall, Security",8.6,8.7
+P109,Trinity World Castle,Edappally,Apartment,3,3,7200000.0,2024-12-15,Hold,"Clubhouse, Gym, Badminton Court, Security",7.7,8.0
+P110,Abad Green Forest,Aluva,Apartment,3,3,6500000.0,Ready to Move,Available,"River View, Jogging Track, Gym, Security, Children Play Area",7.2,8.8
+P111,National Treedom Park,Kalamassery,Apartment,2,2,4500000.0,Ready to Move,Available,"Gym, Security, Solar Power, Garden",8.4,7.6
+P112,Puravankara GrandBay,Kadavanthra,Apartment,3,3,14000000.0,Ready to Move,Available,"Waterfront, Infinity Pool, Squash Court, Security",8.9,9.0
+P113,SFS Cyber Gateway,Kakkanad,Apartment,1,1,3200000.0,Ready to Move,Available,"High-speed Internet, Gym, Security, Cafeteria",9.2,6.0
+P114,Desai Homes DD Diamond,Kadavanthra,Apartment,2,2,5800000.0,Ready to Move,Available,"Gym, Lift, Security, Intercom",7.8,8.1
+P115,Galaxy Green Terra,Palarivattom,Apartment,3,3,8200000.0,2025-06-30,Available,"Swimming Pool, Gym, EV Charging, Security",8.1,8.6
+P116,Choice Paradise Towers,Tripunithura,Apartment,3,3,9500000.0,Ready to Move,Available,"Helipad, Sky Lounge, Gym, Pool, 24/7 Security",8.0,8.8
+P117,Noel Green Nature,Kakkanad,Apartment,3,3,7800000.0,Ready to Move,Available,"IGBC Certified Green Building, Gym, Pool, Security",8.7,9.0
+P118,Kalyan Heritage Villas,Punkunnam,Villa,4,4,15000000.0,Ready to Move,Available,"Private Lawn, Gated Community, 24/7 Security, Clubhouse",7.4,9.6
+P119,Sobha City Topaz,Ayyanthole,Apartment,3,3,11500000.0,Ready to Move,Available,"25-acre Lake, Mall Access, Clubhouse, Olympic Pool, Security",8.3,9.3
+P120,Cheloor Manor,Thrissur,Apartment,2,2,4200000.0,Ready to Move,Available,"Gym, Covered Parking, Security, Power Backup",7.0,7.8
+P121,Jos Alukkas Imperial Towers,Punkunnam,Apartment,3,3,6800000.0,2025-01-31,Available,"Gym, Rooftop Party Area, Security, Children Play Area",7.6,8.4
+P122,Hilite Country Home,Mannuthy,Villa,3,3,8500000.0,Ready to Move,Available,"Private Garden, Gated Security, Solar Water Heater",7.3,8.9
+P123,Nandanam Serene,Guruvayur,Apartment,1,1,2800000.0,Ready to Move,Available,"Near Temple, 24/7 Water Supply, Security, Lift",7.9,6.8
+P124,Prime Eco Haven,Kalamassery,Villa,4,4,12500000.0,2025-08-15,Available,"Private Terrace, Clubhouse, Gym, Security",7.9,9.1
+P125,Paul Alukkas Beverly Hills,Ayyanthole,Villa,5,5,22000000.0,Ready to Move,Sold,"Luxury Pool, Private Cinema, Home Automation, Security",7.5,9.7
+P126,Skyline Ranch,Tripunithura,Villa,4,4,16500000.0,Ready to Move,Hold,"Gated Community, Private Backyard, Clubhouse, Security",7.8,9.2
