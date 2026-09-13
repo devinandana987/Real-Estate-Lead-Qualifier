@@ -63,15 +63,36 @@ def run_decision_agent(lead_profile: dict, matched_properties: list) -> dict:
     })
     
     try:
-        response = client.chat.completions.create(
-            model="llama3-8b-8192",
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_content}
-            ],
-            response_format={"type": "json_object"},
-            temperature=0.2
-        )
+        models_to_try = [
+            "qwen/qwen3.8-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant"
+        ]
+        response = None
+        last_err = None
+
+        for model_name in models_to_try:
+            try:
+                response = client.chat.completions.create(
+                    model=model_name,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content}
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0.2,
+                    max_tokens=600
+                )
+                if response:
+                    break
+            except Exception as err:
+                last_err = err
+                continue
+
+        if not response:
+            raise last_err or Exception("Failed to query Groq models")
         
         decision = json.loads(response.choices[0].message.content)
         

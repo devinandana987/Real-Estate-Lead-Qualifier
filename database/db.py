@@ -6,6 +6,7 @@ for leads, decisions, property matches, and dashboard analytics.
 """
 
 import os
+import csv
 import json
 import sqlite3
 from contextlib import contextmanager
@@ -15,6 +16,9 @@ from typing import Dict, Any, List, Optional, Tuple, Generator
 DEFAULT_DB_PATH = os.environ.get(
     "LEAD_DB_PATH",
     os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "real_estate_leads.db")
+)
+DEFAULT_LEADS_CSV_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "leads.csv"
 )
 
 
@@ -111,6 +115,100 @@ def initialize_database(db_path: Optional[str] = None) -> None:
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leads_next_action ON leads(next_action);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status);")
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_matches_lead_id ON lead_property_matches(lead_id);")
+
+    # Auto-seed initial demo leads if database is empty
+    try:
+        seed_initial_data_if_empty(db_path)
+    except Exception:
+        pass
+
+
+def seed_initial_data_if_empty(db_path: Optional[str] = None, csv_path: Optional[str] = None) -> int:
+    """
+    Seeds the SQLite database from leads.csv if the leads table is currently empty.
+    Returns the number of leads seeded.
+    """
+    target_csv = csv_path if csv_path else DEFAULT_LEADS_CSV_PATH
+    if not os.path.exists(target_csv) or os.path.getsize(target_csv) == 0:
+        return 0
+
+    with get_db_connection(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT COUNT(*) AS cnt FROM leads;")
+        row = cursor.fetchone()
+        if row and row["cnt"] > 0:
+            return 0  # Already contains data
+
+        inserted = 0
+        try:
+            with open(target_csv, mode="r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                rows_to_insert = []
+                for r in reader:
+                    lead_id = r.get("lead_id")
+                    if not lead_id or not str(lead_id).strip():
+                        continue
+
+                    def to_float(val):
+                        try:
+                            return float(val) if val not in (None, "", "null", "None") else None
+                        except (ValueError, TypeError):
+                            return None
+
+                    loan_val = str(r.get("loan_required", "")).strip().lower()
+                    loan_int = 1 if loan_val in ("true", "1", "yes") else (0 if loan_val in ("false", "0", "no") else None)
+
+                    rows_to_insert.append((
+                        str(lead_id).strip(),
+                        r.get("name"),
+                        r.get("contact"),
+                        r.get("intent"),
+                        r.get("intent_level"),
+                        r.get("property_type"),
+                        r.get("preferred_city"),
+                        r.get("preferred_locality"),
+                        r.get("alternative_localities"),
+                        to_float(r.get("min_budget")),
+                        to_float(r.get("max_budget")),
+                        r.get("budget_flexibility"),
+                        to_float(r.get("bedrooms")),
+                        to_float(r.get("bathrooms")),
+                        to_float(r.get("min_area_sqft")),
+                        r.get("possession_preference"),
+                        r.get("timeline"),
+                        r.get("financing_type"),
+                        loan_int,
+                        to_float(r.get("profile_completeness")) or 0.0,
+                        to_float(r.get("lead_score")),
+                        r.get("lead_quality"),
+                        r.get("next_action"),
+                        r.get("decision_reason"),
+                        r.get("status") or "NEW",
+                        r.get("broker_summary"),
+                        None
+                    ))
+
+                if rows_to_insert:
+                    columns = [
+                        "lead_id", "name", "contact", "intent", "intent_level",
+                        "property_type", "preferred_city", "preferred_locality", "alternative_localities",
+                        "min_budget", "max_budget", "budget_flexibility",
+                        "bedrooms", "bathrooms", "min_area_sqft",
+                        "possession_preference", "timeline", "financing_type", "loan_required",
+                        "profile_completeness", "lead_score", "lead_quality",
+                        "next_action", "decision_reason", "status", "broker_summary", "raw_profile_json"
+                    ]
+                    placeholders = ", ".join(["?"] * len(columns))
+                    col_names = ", ".join(columns)
+                    conn.executemany(f"""
+                        INSERT OR IGNORE INTO leads ({col_names}, created_at, updated_at)
+                        VALUES ({placeholders}, datetime('now', 'localtime'), datetime('now', 'localtime'));
+                    """, rows_to_insert)
+                    inserted = len(rows_to_insert)
+        except Exception:
+            inserted = 0
+
+        return inserted
 
 
 def row_to_dict(row: Optional[sqlite3.Row]) -> Optional[Dict[str, Any]]:

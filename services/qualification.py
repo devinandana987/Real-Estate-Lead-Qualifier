@@ -138,8 +138,8 @@ def normalize_lead_profile(lead_profile: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(locality, str):
         locality = locality.strip().title() if locality.strip().lower() not in ("unknown", "none", "n/a") else None
 
-    # If 'locations' list was provided (e.g. from services.lead_scorer)
-    locations = lead_profile.get("locations")
+    # If 'locations' or 'preferred_locations' list was provided
+    locations = lead_profile.get("locations") or lead_profile.get("preferred_locations")
     if isinstance(locations, list) and locations:
         if not locality:
             locality = str(locations[0]).strip().title()
@@ -319,7 +319,7 @@ def normalize_property_matches(matches: Optional[List[Dict[str, Any]]], lead_id:
             except (ValueError, TypeError):
                 match_pct = None
 
-        match_reason = m.get("match_reason") or m.get("reason")
+        match_reason = m.get("match_reason") or m.get("match_explanation") or m.get("explanation") or m.get("reason")
 
         normalized_matches.append({
             "lead_id": str(lead_id).strip(),
