@@ -1,5 +1,6 @@
 # agent/graph.py
 import os
+from dotenv import load_dotenv
 import json
 from groq import Groq
 from services.lead_scorer import calculate_lead_score, get_qualification_status
@@ -9,6 +10,7 @@ def run_decision_agent(lead_profile: dict, matched_properties: list) -> dict:
     Runs the LLM agent to decide the next action based on lead profile and matches.
     Returns a dictionary representing the agent's decision.
     """
+    load_dotenv()
     api_key = os.environ.get("GROQ_API_KEY")
     if not api_key or api_key == "your_groq_api_key_here":
         # Fallback for UI if API key is not yet set
@@ -31,18 +33,21 @@ def run_decision_agent(lead_profile: dict, matched_properties: list) -> dict:
     You are an expert real estate AI agent. Your job is to review a buyer's profile and matching properties, 
     and decide the NEXT BEST ACTION. 
     
-    Lead Score (Deterministic): {score}/100
-    Qualification Status: {status}
+    Lead Score (Deterministic Baseline): {score}/100
+    Baseline Status Indicator: {status}
     
-    Rules for next action:
-    - ESCALATE_TO_BROKER: If score >= 80 and at least 1 property matches well.
-    - SEND_PROPERTY_SHORTLIST: If score >= 60 and properties exist.
-    - REQUEST_INFORMATION: If critical information (budget, location, timeline) is missing.
-    - LOW_PRIORITY: If score < 40 or no matching properties for their budget.
+    Your goal is to choose the NEXT BEST ACTION based on the buyer's intent, missing information, and available inventory.
+    The deterministic Lead Score ({score}/100) is provided as a baseline indicator of urgency and completeness, but YOU must make the final semantic decision.
+    
+    Available Actions:
+    - ESCALATE_TO_BROKER: Use when the buyer has high intent, a clear timeline, and there is suitable inventory. Brokers should only speak to serious, qualified buyers.
+    - SEND_PROPERTY_SHORTLIST: Use when the buyer is interested and we have matches, but they aren't urgent enough for an immediate broker call.
+    - REQUEST_INFORMATION: Use when you cannot effectively match properties because critical constraints (like budget, location, or timeline) are vague or missing.
+    - LOW_PRIORITY: Use when the buyer's expectations are entirely disconnected from reality (e.g., unrealistic budget) or intent is extremely low.
     
     You MUST output your response strictly as a JSON object with this exact schema:
     {{
-        "qualification_status": "{status}",
+        "qualification_status": "HOT | WARM | NURTURE | LOW_PRIORITY",
         "score": {score},
         "next_action": "ESCALATE_TO_BROKER | SEND_PROPERTY_SHORTLIST | REQUEST_INFORMATION | LOW_PRIORITY",
         "reasoning": ["reason 1", "reason 2"],
@@ -70,9 +75,8 @@ def run_decision_agent(lead_profile: dict, matched_properties: list) -> dict:
         
         decision = json.loads(response.choices[0].message.content)
         
-        # Fallback to ensure score and status aren't overwritten badly by LLM
+        # Ensure the original deterministic score is preserved, but allow the LLM to dictate the final status tier dynamically
         decision["score"] = score
-        decision["qualification_status"] = status
         
         return decision
     except Exception as e:
